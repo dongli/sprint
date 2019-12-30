@@ -19,6 +19,7 @@ if (NOT parent_dir)
 endif ()
 
 set(sources
+  src/math_mod.F90
   src/bilinear_interpolator_mod.F90
 )
 

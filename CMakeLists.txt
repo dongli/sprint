@@ -21,6 +21,7 @@ endif ()
 set(sources
   src/math_mod.F90
   src/bilinear_interpolator_mod.F90
+  src/sprint.F90
 )
 
 add_library(sprint ${sources})

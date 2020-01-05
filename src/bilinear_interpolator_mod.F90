@@ -20,8 +20,10 @@ module bilinear_interpolator_mod
     type(kdtree_type) tree
     type(hash_table_type) point_caches
   contains
+    procedure, private :: bilinear_interpolator_init_2d_r4
     procedure, private :: bilinear_interpolator_init_2d_r8
-    generic :: init => bilinear_interpolator_init_2d_r8
+    generic :: init => bilinear_interpolator_init_2d_r4, &
+                       bilinear_interpolator_init_2d_r8
     procedure :: prepare => bilinear_interpolator_prepare
     procedure :: get_enclose_grid_idx => bilinear_interpolator_get_enclose_grid_idx
     procedure, private :: bilinear_interpolator_apply_2d_r8
@@ -34,6 +36,17 @@ module bilinear_interpolator_mod
   end type bilinear_interpolator_type
 
 contains
+
+  subroutine bilinear_interpolator_init_2d_r4(this, x, y, cache_size)
+
+    class(bilinear_interpolator_type), intent(out) :: this
+    real(4), intent(in) :: x(:,:)
+    real(4), intent(in) :: y(:,:)
+    integer, intent(in), optional :: cache_size
+
+    call this%init(dble(x), dble(y), cache_size)
+
+  end subroutine bilinear_interpolator_init_2d_r4
 
   subroutine bilinear_interpolator_init_2d_r8(this, x, y, cache_size)
 

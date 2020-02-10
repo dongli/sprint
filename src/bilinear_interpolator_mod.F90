@@ -44,7 +44,26 @@ contains
     real(4), intent(in) :: y(:,:)
     integer, intent(in), optional :: cache_size
 
-    call this%init(dble(x), dble(y), cache_size)
+    this%grid_nx = size(x, 1)
+    this%grid_ny = size(x, 2)
+
+    if (allocated(this%grid_x)) deallocate(this%grid_x)
+    if (allocated(this%grid_y)) deallocate(this%grid_y)
+    allocate(this%grid_x(this%grid_nx,this%grid_ny))
+    allocate(this%grid_y(this%grid_nx,this%grid_ny))
+    this%grid_x = x
+    this%grid_y = y
+
+    call this%tree%build(                                  &
+      reshape(this%grid_x, [this%grid_nx * this%grid_ny]), &
+      reshape(this%grid_y, [this%grid_nx * this%grid_ny])  &
+    )
+
+    if (present(cache_size)) then
+      this%point_caches = hash_table(cache_size)
+    else
+      this%point_caches = hash_table(1000)
+    end if
 
   end subroutine bilinear_interpolator_init_2d_r4
 
@@ -66,8 +85,8 @@ contains
     this%grid_y = y
 
     call this%tree%build(                        &
-      reshape(x, [this%grid_nx * this%grid_ny]), &
-      reshape(y, [this%grid_nx * this%grid_ny])  &
+      reshape(this%grid_x, [this%grid_nx * this%grid_ny]), &
+      reshape(this%grid_y, [this%grid_nx * this%grid_ny])  &
     )
 
     if (present(cache_size)) then

@@ -25,7 +25,7 @@ set(sources
 )
 
 add_library(sprint ${sources})
-target_link_libraries(sprint fortran_proj fortran_container fortran_string kdtree fiona flogger fortran_proj)
+target_link_libraries(sprint fortran_proj fortran_container fortran_string fortran_kdtree fiona flogger fortran_proj)
 
 if (NOT parent_dir)
   add_executable(bilinear_interpolator_test.exe src/bilinear_interpolator_test.F90)

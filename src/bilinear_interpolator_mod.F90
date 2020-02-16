@@ -8,6 +8,7 @@ module bilinear_interpolator_mod
   implicit none
 
   type point_cache_type
+    logical :: is_outside = .false.
     integer :: enclose_grid_idx(2,4) = 0
     real(8) :: weights(4) = 0.0d0
   end type point_cache_type
@@ -28,6 +29,10 @@ module bilinear_interpolator_mod
     procedure :: bilinear_interpolator_prepare_r8
     generic :: prepare => bilinear_interpolator_prepare_r4, &
                           bilinear_interpolator_prepare_r8
+    procedure :: bilinear_interpolator_is_outside_r4
+    procedure :: bilinear_interpolator_is_outside_r8
+    generic :: is_outside => bilinear_interpolator_is_outside_r4, &
+                             bilinear_interpolator_is_outside_r8
     procedure :: get_enclose_grid_idx => bilinear_interpolator_get_enclose_grid_idx
     procedure, private :: bilinear_interpolator_apply_2d_r8
     procedure, private :: bilinear_interpolator_apply_3d_r8
@@ -141,17 +146,21 @@ contains
           grid_y(j) = this%grid_y(grid_i,grid_j)
         end if
       end do
-      ! Calculate interpolation weights.
-      jacob(1,1) = ((grid_x(2) + grid_x(3)) - (grid_x(4) + grid_x(1))) * 0.5 ! dxda
-      jacob(1,2) = ((grid_x(3) + grid_x(4)) - (grid_x(1) + grid_x(2))) * 0.5 ! dxdb
-      jacob(2,1) = ((grid_y(2) + grid_y(3)) - (grid_y(4) + grid_y(1))) * 0.5 ! dyda
-      jacob(2,2) = ((grid_y(3) + grid_y(4)) - (grid_y(1) + grid_y(2))) * 0.5 ! dydb
-      jacobi = mat_inv(jacob)
-      ab = matmul(jacobi, [x, y]) - matmul(jacobi, [grid_x(1), grid_y(1)])
-      point_cache%weights(1) = (1 - ab(1)) * (1 - ab(2))
-      point_cache%weights(2) = ab(1) * (1 - ab(2))
-      point_cache%weights(3) = ab(1) * ab(2)
-      point_cache%weights(4) = (1 - ab(1)) * ab(2)
+      if (any(point_cache%enclose_grid_idx == 0)) then
+        point_cache%is_outside = .true.
+      else
+        ! Calculate interpolation weights.
+        jacob(1,1) = ((grid_x(2) + grid_x(3)) - (grid_x(4) + grid_x(1))) * 0.5 ! dxda
+        jacob(1,2) = ((grid_x(3) + grid_x(4)) - (grid_x(1) + grid_x(2))) * 0.5 ! dxdb
+        jacob(2,1) = ((grid_y(2) + grid_y(3)) - (grid_y(4) + grid_y(1))) * 0.5 ! dyda
+        jacob(2,2) = ((grid_y(3) + grid_y(4)) - (grid_y(1) + grid_y(2))) * 0.5 ! dydb
+        jacobi = mat_inv(jacob)
+        ab = matmul(jacobi, [x, y]) - matmul(jacobi, [grid_x(1), grid_y(1)])
+        point_cache%weights(1) = (1 - ab(1)) * (1 - ab(2))
+        point_cache%weights(2) = ab(1) * (1 - ab(2))
+        point_cache%weights(3) = ab(1) * ab(2)
+        point_cache%weights(4) = (1 - ab(1)) * ab(2)
+      end if
       call this%point_caches%insert(key, point_cache)
     end if
 
@@ -198,21 +207,63 @@ contains
           grid_y(j) = this%grid_y(grid_i,grid_j)
         end if
       end do
-      ! Calculate interpolation weights.
-      jacob(1,1) = ((grid_x(2) + grid_x(3)) - (grid_x(4) + grid_x(1))) * 0.5 ! dxda
-      jacob(1,2) = ((grid_x(3) + grid_x(4)) - (grid_x(1) + grid_x(2))) * 0.5 ! dxdb
-      jacob(2,1) = ((grid_y(2) + grid_y(3)) - (grid_y(4) + grid_y(1))) * 0.5 ! dyda
-      jacob(2,2) = ((grid_y(3) + grid_y(4)) - (grid_y(1) + grid_y(2))) * 0.5 ! dydb
-      jacobi = mat_inv(jacob)
-      ab = matmul(jacobi, [x, y]) - matmul(jacobi, [grid_x(1), grid_y(1)])
-      point_cache%weights(1) = (1 - ab(1)) * (1 - ab(2))
-      point_cache%weights(2) = ab(1) * (1 - ab(2))
-      point_cache%weights(3) = ab(1) * ab(2)
-      point_cache%weights(4) = (1 - ab(1)) * ab(2)
+      if (any(point_cache%enclose_grid_idx == 0)) then
+        point_cache%is_outside = .true.
+      else
+        ! Calculate interpolation weights.
+        jacob(1,1) = ((grid_x(2) + grid_x(3)) - (grid_x(4) + grid_x(1))) * 0.5 ! dxda
+        jacob(1,2) = ((grid_x(3) + grid_x(4)) - (grid_x(1) + grid_x(2))) * 0.5 ! dxdb
+        jacob(2,1) = ((grid_y(2) + grid_y(3)) - (grid_y(4) + grid_y(1))) * 0.5 ! dyda
+        jacob(2,2) = ((grid_y(3) + grid_y(4)) - (grid_y(1) + grid_y(2))) * 0.5 ! dydb
+        jacobi = mat_inv(jacob)
+        ab = matmul(jacobi, [x, y]) - matmul(jacobi, [grid_x(1), grid_y(1)])
+        point_cache%weights(1) = (1 - ab(1)) * (1 - ab(2))
+        point_cache%weights(2) = ab(1) * (1 - ab(2))
+        point_cache%weights(3) = ab(1) * ab(2)
+        point_cache%weights(4) = (1 - ab(1)) * ab(2)
+      end if
       call this%point_caches%insert(key, point_cache)
     end if
 
   end subroutine bilinear_interpolator_prepare_r8
+
+  logical function bilinear_interpolator_is_outside_r4(this, x, y) result(res)
+
+    class(bilinear_interpolator_type), intent(inout) :: this
+    real(4), intent(in) :: x
+    real(4), intent(in) :: y
+
+    character(30) key
+
+    key = to_string(x, 4) // ':' // to_string(y, 4)
+    if (.not. this%point_caches%hashed(key)) then
+      call this%prepare(x, y)
+    end if
+    select type (point_cache => this%point_caches%value(key))
+    type is (point_cache_type)
+      res = point_cache%is_outside
+    end select
+
+  end function bilinear_interpolator_is_outside_r4
+
+  logical function bilinear_interpolator_is_outside_r8(this, x, y) result(res)
+
+    class(bilinear_interpolator_type), intent(inout) :: this
+    real(8), intent(in) :: x
+    real(8), intent(in) :: y
+
+    character(30) key
+
+    key = to_string(x, 4) // ':' // to_string(y, 4)
+    if (.not. this%point_caches%hashed(key)) then
+      call this%prepare(x, y)
+    end if
+    select type (point_cache => this%point_caches%value(key))
+    type is (point_cache_type)
+      res = point_cache%is_outside
+    end select
+
+  end function bilinear_interpolator_is_outside_r8
 
   function bilinear_interpolator_get_enclose_grid_idx(this, x, y) result(res)
 
